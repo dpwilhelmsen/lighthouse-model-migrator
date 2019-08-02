@@ -1,16 +1,15 @@
 {
-    "name": "danielwilhelmsen/lighthousemodelmigrator",
+    "name": "danielwilhelmsen/lighthouse-model-migrator",
     "description": ":description",
     "license": "license",
     "authors": [
         {
             "name": "Daniel Wilhelmsen",
-            "email": "dpwilhelmsen@gmail.com",
             "homepage": "https://danielwilhelmsen.com"
         }
     ],
-    "homepage": "https://github.com/danielwilhelmsen/lighthousemodelmigrator",
-    "keywords": ["Laravel", "LighthouseModelMigrator"],
+    "homepage": "https://github.com/dpwilhelmsen/lighthouse-model-migrator",
+    "keywords": ["Laravel", "Lighthouse Model Migrator"],
     "require": {
         "illuminate/support": "~5",
         "haydenpierce/class-finder": "^0.3.3",

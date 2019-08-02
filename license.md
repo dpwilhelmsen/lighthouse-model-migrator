@@ -1,5 +1,5 @@
 # The license
 
-Copyright (c) Daniel Wilhelmsen <dpwilhelmsen@gmail.com>
+Copyright (c) Daniel Wilhelmsen
 
 ...Add your license text here...
