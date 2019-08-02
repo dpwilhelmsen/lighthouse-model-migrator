@@ -11,7 +11,7 @@ To install this package, you'll have to update the `composer.json` to pull from 
 // composer.json
 
 "require": {
-	"danielwilhelmsen/lighthouse-model-migrator": "dev-master"
+	"dpwilhelmsen/lighthouse-model-migrator": "dev-master"
 },
 "repositories": [
     {
