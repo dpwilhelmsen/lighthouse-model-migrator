@@ -1,0 +1,45 @@
+{
+    "name": "danielwilhelmsen/lighthousemodelmigrator",
+    "description": ":description",
+    "license": "license",
+    "authors": [
+        {
+            "name": "Daniel Wilhelmsen",
+            "email": "dpwilhelmsen@gmail.com",
+            "homepage": "https://danielwilhelmsen.com"
+        }
+    ],
+    "homepage": "https://github.com/danielwilhelmsen/lighthousemodelmigrator",
+    "keywords": ["Laravel", "LighthouseModelMigrator"],
+    "require": {
+        "illuminate/support": "~5",
+        "haydenpierce/class-finder": "^0.3.3",
+        "nikic/php-parser": "^4.2"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "~7.0",
+        "mockery/mockery": "^1.1",
+        "orchestra/testbench": "~3.0",
+        "sempro/phpunit-pretty-print": "^1.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "DanielWilhelmsen\\LighthouseModelMigrator\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "DanielWilhelmsen\\LighthouseModelMigrator\\Tests\\": "tests"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "DanielWilhelmsen\\LighthouseModelMigrator\\LighthouseModelMigratorServiceProvider"
+            ],
+            "aliases": {
+                "LighthouseModelMigrator": "DanielWilhelmsen\\LighthouseModelMigrator\\Facades\\LighthouseModelMigrator"
+            }
+        }
+    }
+}
