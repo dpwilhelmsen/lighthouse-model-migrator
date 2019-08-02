@@ -1,0 +1,3 @@
+    {{queryAll}}: [{{modelName}}!]! @all
+    {{querySingle}}(id: ID! @eq): {{modelName}} @find
+

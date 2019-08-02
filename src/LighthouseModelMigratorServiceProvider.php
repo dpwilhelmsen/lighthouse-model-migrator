@@ -32,12 +32,12 @@ class LighthouseModelMigratorServiceProvider extends ServiceProvider
      */
     public function register()
     {
-        $this->mergeConfigFrom(__DIR__.'/../config/lighthousemodelmigrator.php', 'lighthousemodelmigrator');
+        /*$this->mergeConfigFrom(__DIR__.'/../config/lighthousemodelmigrator.php', 'lighthousemodelmigrator');
 
         // Register the service the package provides.
         $this->app->singleton('lighthousemodelmigrator', function ($app) {
             return new LighthouseModelMigrator;
-        });
+        });*/
     }
 
     /**
@@ -47,7 +47,7 @@ class LighthouseModelMigratorServiceProvider extends ServiceProvider
      */
     public function provides()
     {
-        return ['lighthousemodelmigrator'];
+        return [];
     }
 
     /**
@@ -58,9 +58,9 @@ class LighthouseModelMigratorServiceProvider extends ServiceProvider
     protected function bootForConsole()
     {
         // Publishing the configuration file.
-        $this->publishes([
+        /*$this->publishes([
             __DIR__.'/../config/lighthousemodelmigrator.php' => config_path('lighthousemodelmigrator.php'),
-        ], 'lighthousemodelmigrator.config');
+        ], 'lighthousemodelmigrator.config');*/
 
         // Publishing the views.
         /*$this->publishes([

@@ -71,6 +71,10 @@ class LighthouseMigrateModel extends Command
         $namespaces = config('lighthouse.namespaces.models');
         $classesWithErrors = ['types' => []];
         $types = '';
+        $queries = '';
+        $path = base_path('graphql/schema.graphql');
+        $schema = file_get_contents($path);
+
         foreach ($namespaces as $namespace) {
             $classes = ClassFinder::getClassesInNamespace($namespace);
             foreach ($classes as $class) {
@@ -85,10 +89,15 @@ class LighthouseMigrateModel extends Command
                 // print_r($columnsMap);
                 //$classesWithErrors;
                 $types .= $output;
+
+                $queries .= $this->generateQueries($class);
             }
         }
 
-        dd($types);
+        $re = '/type Query \{([^}]+)}/s';
+        $replaced = preg_replace($re, 'type Query { ${1}' . $queries .' }', $schema);
+        $replaced .= $types;
+        dd($replaced);
     }
 
     protected function generateType($values)
@@ -100,6 +109,21 @@ class LighthouseMigrateModel extends Command
         );
 
         file_put_contents(app_path("/{$name}.php"), $modelTemplate);
+    }
+
+    protected function generateQueries($fullClassName)
+    {
+        $modelName = class_basename($fullClassName);
+        $querySingle = Str::snake($modelName);
+        $queryAll = Str::plural($querySingle);
+
+        $typeTemplate = str_replace(
+            ['{{modelName}}', '{{queryAll}}', '{{querySingle}}'],
+            [$modelName, $queryAll, $querySingle],
+            $this->getStub('Query')
+        );
+
+        return $typeTemplate;
     }
 
     /**
