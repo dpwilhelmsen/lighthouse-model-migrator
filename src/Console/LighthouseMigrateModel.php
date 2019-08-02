@@ -10,8 +10,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use PhpParser\Error;
-use PhpParser\ParserFactory;
 use PhpParser\NodeTraverser;
+use PhpParser\ParserFactory;
 
 class LighthouseMigrateModel extends Command
 {
@@ -69,49 +69,53 @@ class LighthouseMigrateModel extends Command
     public function handle()
     {
         $namespaces = config('lighthouse.namespaces.models');
-        $classesWithErrors = ['types' => []];
+        $classesWithErrors = [];
         $types = '';
         $queries = '';
         $path = base_path('graphql/schema.graphql');
         $schema = file_get_contents($path);
 
         foreach ($namespaces as $namespace) {
+            $this->comment("Finding models in $namespace namespace");
             $classes = ClassFinder::getClassesInNamespace($namespace);
+            $classes = array_filter($classes, function ($class) {
+                $model = new \ReflectionClass($class);
+                return $model->isSubclassOf(Model::class);
+            });
+            $numberOfModels = count($classes);
+            $this->comment("Found $numberOfModels models. Generating graphql");
+            $bar = $this->output->createProgressBar($numberOfModels);
             foreach ($classes as $class) {
                 $model = new \ReflectionClass($class);
-                if (!$model->isSubclassOf(Model::class)) {
-                    continue;
-                }
                 $table = $this->getTableName($model, $class);
 
                 $columnsMap = $this->getColumnDefinitions($table, $classesWithErrors);
                 $output = $this->generateTypeForClass($class, $columnsMap, $model);
-                // print_r($columnsMap);
-                //$classesWithErrors;
                 $types .= $output;
 
                 $queries .= $this->generateQueries($class);
+                $bar->advance();
             }
+        }
+        $this->line("\n-------------------------------------");
+        $this->info('Types created.');
+        if (count($classesWithErrors) > 0) {
+            $this->error('There were errors importing the fields for the following tables: ' .
+                implode(', ', array_keys($classesWithErrors)));
         }
 
         $re = '/type Query \{([^}]+)}/s';
-        $replaced = preg_replace($re, 'type Query { ${1}' . $queries .' }', $schema);
+        $replaced = preg_replace($re, 'type Query { ${1}' . $queries . ' }', $schema);
         $replaced .= $types;
-        dd($replaced);
+        file_put_contents(base_path('graphql/schema.graphql'), $replaced);
+        $this->info('GraphQL created!');
     }
 
-    protected function generateType($values)
-    {
-        $modelTemplate = str_replace(
-            ['{{modelName}}'],
-            [$name],
-            $this->getStub('Type')
-        );
-
-        file_put_contents(app_path("/{$name}.php"), $modelTemplate);
-    }
-
-    protected function generateQueries($fullClassName)
+    /**
+     * @param string $fullClassName
+     * @return string
+     */
+    protected function generateQueries(string $fullClassName) : string
     {
         $modelName = class_basename($fullClassName);
         $querySingle = Str::snake($modelName);
@@ -165,17 +169,20 @@ class LighthouseMigrateModel extends Command
                 $type = ($columnName === 'id') ? 'id' : Schema::getColumnType($table, $columnName);
                 $required = Schema::getConnection()->getDoctrineColumn($table, $columnName)->getNotNull();
                 $columnsMap[$columnName] = ['type' => $type, 'required' => $required];
-                $classesWithErrors['types'][$type] = true;
             } catch (DBALException $e) {
-                echo $e->getMessage() . "\n";
-                echo 'error: ' . $table . " " . $columnName . "\n";
                 $classesWithErrors[$table] = true;
             }
         }
         return $columnsMap;
     }
 
-    private function generateTypeForClass(string $class, array $columnDefinitions, \ReflectionClass $reflectionClass)
+    /**
+     * @param string           $class
+     * @param array            $columnDefinitions
+     * @param \ReflectionClass $reflectionClass
+     * @return string
+     */
+    private function generateTypeForClass(string $class, array $columnDefinitions, \ReflectionClass $reflectionClass) : string
     {
         $fields = $this->generateFields($columnDefinitions);
         $relations = $this->generateRelations($reflectionClass);
@@ -210,13 +217,17 @@ class LighthouseMigrateModel extends Command
         return $fields;
     }
 
-    private function generateRelations($reflectionClass)
+    /**
+     * @param \ReflectionClass $reflectionClass
+     * @return string
+     */
+    private function generateRelations(\ReflectionClass $reflectionClass) : ?string
     {
         $relations = '';
-        $file =  $reflectionClass->getFileName();
+        $file = $reflectionClass->getFileName();
         $code = file_get_contents($file);
         $parser = (new ParserFactory)->create(ParserFactory::PREFER_PHP7);
-        $traverser     = new NodeTraverser;
+        $traverser = new NodeTraverser;
         $visitor = new RelationshipFinder;
         $traverser->addVisitor($visitor);
         try {
@@ -225,10 +236,11 @@ class LighthouseMigrateModel extends Command
             $stmts = $traverser->traverse($ast);
         } catch (Error $error) {
             echo "Parse error: {$error->getMessage()}\n";
-            return;
+            return null;
         }
 
-        foreach ($visitor->relations as $fieldName => $relationData) {
+        foreach ($visitor->relations as $methodName => $relationData) {
+            $fieldName = Str::snake($methodName);
             if ($relationData['type'] === 'belongsTo') {
                 $relationsTemplate = str_replace(
                     ['{{fieldName}}', '{{typeName}}'],

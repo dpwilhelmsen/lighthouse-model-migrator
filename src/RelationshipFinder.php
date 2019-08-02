@@ -29,7 +29,7 @@ class RelationshipFinder extends NodeVisitorAbstract
             if ($class) {
                 try {
                     $model = ($class->args[0]->value instanceof Node\Expr\ClassConstFetch)
-                        ? $class->args[0]->value->class->toCodeString() : $class->args[0]->value;
+                        ? $class->args[0]->value->class->toCodeString() : $class->args[0]->value->value;
                     $this->relations[$node->name->toString()] = [
                         'type'  => $class->name->toString(),
                         'model' => $model,
