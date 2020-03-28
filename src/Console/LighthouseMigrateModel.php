@@ -75,6 +75,10 @@ class LighthouseMigrateModel extends Command
         $path = base_path('graphql/schema.graphql');
         $schema = file_get_contents($path);
 
+        if (!file_exists('graphql/models')) {
+            mkdir('graphql/models', 0755, true);
+        }
+
         foreach ($namespaces as $namespace) {
             $this->comment("Finding models in $namespace namespace");
             $classes = ClassFinder::getClassesInNamespace($namespace);
@@ -90,10 +94,11 @@ class LighthouseMigrateModel extends Command
                 $table = $this->getTableName($model, $class);
 
                 $columnsMap = $this->getColumnDefinitions($table, $classesWithErrors);
-                $output = $this->generateTypeForClass($class, $columnsMap, $model);
-                $types .= $output;
+                $types = $this->generateTypeForClass($class, $columnsMap, $model);
 
-                $queries .= $this->generateQueries($class);
+                $graphql = $this->generateQueries($class, $types);
+                $baseName = class_basename($class);
+                file_put_contents(base_path("graphql/models/$baseName.graphql"), $graphql);
                 $bar->advance();
             }
         }
@@ -103,27 +108,23 @@ class LighthouseMigrateModel extends Command
             $this->error('There were errors importing the fields for the following tables: ' .
                 implode(', ', array_keys($classesWithErrors)));
         }
-
-        $re = '/type Query \{([^}]+)}/s';
-        $replaced = preg_replace($re, 'type Query { ${1}' . $queries . ' }', $schema);
-        $replaced .= $types;
-        file_put_contents(base_path('graphql/schema.graphql'), $replaced);
         $this->info('GraphQL created!');
     }
 
     /**
      * @param string $fullClassName
+     * @param string $types
      * @return string
      */
-    protected function generateQueries(string $fullClassName) : string
+    protected function generateQueries(string $fullClassName, string $types) : string
     {
         $modelName = class_basename($fullClassName);
         $querySingle = Str::snake($modelName);
         $queryAll = Str::plural($querySingle);
 
         $typeTemplate = str_replace(
-            ['{{modelName}}', '{{queryAll}}', '{{querySingle}}'],
-            [$modelName, $queryAll, $querySingle],
+            ['{{modelName}}', '{{queryAll}}', '{{querySingle}}', '{{types}}'],
+            [$modelName, $queryAll, $querySingle, $types],
             $this->getStub('Query')
         );
 
@@ -170,6 +171,7 @@ class LighthouseMigrateModel extends Command
                 $required = Schema::getConnection()->getDoctrineColumn($table, $columnName)->getNotNull();
                 $columnsMap[$columnName] = ['type' => $type, 'required' => $required];
             } catch (DBALException $e) {
+                dump($e);
                 $classesWithErrors[$table] = true;
             }
         }
@@ -185,12 +187,43 @@ class LighthouseMigrateModel extends Command
     private function generateTypeForClass(string $class, array $columnDefinitions, \ReflectionClass $reflectionClass) : string
     {
         $fields = $this->generateFields($columnDefinitions);
-        $relations = $this->generateRelations($reflectionClass);
+        list($relations, $relationsInfo) = $this->generateRelations($reflectionClass, class_basename($class));
+
+        $types = ['belongsTo', 'hasMany', 'belongsToMany', 'hasOne'];
+        $createInputs = '';
+        $updateInputs = '';
+
+        foreach ($relationsInfo as $relationDetails) {
+            if (!in_array($relationDetails['type'], $types)) {
+                continue;
+            }
+            $createName = "Create" . $relationDetails['class'] . Str::studly($relationDetails['type']);
+            $updateName = "Update" . $relationDetails['class'] . Str::studly($relationDetails['type']);
+            $fieldTemplate = str_replace(
+                ['{{fieldName}}', '{{fieldType}}', '{{required}}'],
+                [$relationDetails['field'], $createName, ''],
+                $this->getStub('Field')
+            );
+            $createInputs .= $fieldTemplate;
+
+            $fieldTemplate = str_replace(
+                ['{{fieldName}}', '{{fieldType}}', '{{required}}'],
+                [$relationDetails['field'], $updateName, ''],
+                $this->getStub('Field')
+            );
+            $updateInputs .= $fieldTemplate;
+        }
 
         $typeTemplate = str_replace(
-            ['{{modelName}}', '{{fields}}', '{{relations}}'],
-            [class_basename($class), $fields, $relations],
+            ['{{modelName}}', '{{fields}}', '{{relations}}', '{{createRelations}}', '{{updateRelations}}'],
+            [class_basename($class), $fields, $relations, $createInputs, $updateInputs],
             $this->getStub('Type')
+        );
+
+        $typeTemplate .= str_replace(
+            ['{{model}}'],
+            [class_basename($class)],
+            $this->getStub('RelationInputs')
         );
 
         return $typeTemplate;
@@ -219,11 +252,12 @@ class LighthouseMigrateModel extends Command
 
     /**
      * @param \ReflectionClass $reflectionClass
-     * @return string
+     * @return array
      */
-    private function generateRelations(\ReflectionClass $reflectionClass) : ?string
+    private function generateRelations(\ReflectionClass $reflectionClass) : ?array
     {
         $relations = '';
+        $relationsInfo = [];
         $file = $reflectionClass->getFileName();
         $code = file_get_contents($file);
         $parser = (new ParserFactory)->create(ParserFactory::PREFER_PHP7);
@@ -241,23 +275,25 @@ class LighthouseMigrateModel extends Command
 
         foreach ($visitor->relations as $methodName => $relationData) {
             $fieldName = Str::snake($methodName);
+            $relationClassName = class_basename($relationData['model']);
             if ($relationData['type'] === 'belongsTo') {
                 $relationsTemplate = str_replace(
                     ['{{fieldName}}', '{{typeName}}'],
-                    [$fieldName, class_basename($relationData['model'])],
+                    [$fieldName, $relationClassName],
                     $this->getStub('BelongsTo')
                 );
             } else {
                 $relationsTemplate = str_replace(
                     ['{{fieldName}}', '{{typeName}}', '{{relationType}}'],
-                    [$fieldName, class_basename($relationData['model']), $relationData['type']],
+                    [$fieldName, $relationClassName, $relationData['type']],
                     $this->getStub('Many')
                 );
             }
 
             $relations .= $relationsTemplate;
+            $relationsInfo[] = ['field' => $fieldName, 'class' => $relationClassName, 'type' => $relationData['type']];
         }
 
-        return $relations;
+        return [$relations, $relationsInfo];
     }
 }

@@ -1,3 +1,6 @@
-    {{queryAll}}: [{{modelName}}!]! @all
+extend type Query {
+    {{queryAll}}: [{{modelName}}!]! @paginate
     {{querySingle}}(id: ID! @eq): {{modelName}} @find
+}
 
+{{types}}

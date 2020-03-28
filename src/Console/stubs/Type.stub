@@ -1,5 +1,26 @@
+extend type Mutation {
+    create{{modelName}}(input: Create{{modelName}}Input @spread): {{modelName}} @create
+    update{{modelName}}(input: Update{{modelName}}Input @spread): {{modelName}} @update
+    upsert{{modelName}}(input: Upsert{{modelName}}Input @spread): {{modelName}} @upsert
+    delete{{modelName}}(id: ID!): {{modelName}} @delete
+}
+
 type {{modelName}} {
 {{fields}}
 {{relations}}
 }
 
+input Create{{modelName}}Input {
+{{fields}}
+{{createRelations}}
+}
+
+input Update{{modelName}}Input {
+{{fields}}
+{{updateRelations}}
+}
+
+input Upsert{{modelName}}Input {
+{{fields}}
+{{updateRelations}}
+}

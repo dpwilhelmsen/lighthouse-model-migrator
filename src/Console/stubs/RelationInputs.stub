@@ -1,0 +1,56 @@
+input Create{{model}}BelongsTo {
+  connect: ID
+  create: Create{{model}}Input
+  update: Update{{model}}Input
+  upsert: Upsert{{model}}Input
+}
+
+input Update{{model}}BelongsTo {
+  connect: ID
+  create: Create{{model}}Input
+  update: Update{{model}}Input
+  upsert: Update{{model}}Input
+  disconnect: Boolean
+  delete: Boolean
+}
+
+input Create{{model}}HasOne {
+    create: Create{{model}}Input
+    psert: Update{{model}}Input
+}
+
+input Update{{model}}HasOne {
+    create: Create{{model}}Input
+    update: Update{{model}}Input
+    upsert: Upsert{{model}}Input
+    delete: ID
+}
+
+input Create{{model}}HasMany {
+  create: [Create{{model}}Input!]!
+}
+
+input Update{{model}}HasMany {
+  create: [Create{{model}}Input!]
+  update: [Update{{model}}Input!]
+  upsert: [Upsert{{model}}Input!]
+  delete: [ID!]
+}
+
+input Create{{model}}BelongsToMany {
+  create: [Create{{model}}Input!]
+  upsert: [Upsert{{model}}Input!]
+  connect: [ID!]
+  sync: [ID!]
+}
+
+input Update{{model}}BelongsToMany {
+  create: [Create{{model}}Input!]
+  connect: [ID!]
+  update: [Update{{model}}Input!]
+  upsert: [Upsert{{model}}Input!]
+  sync: [ID!]
+  syncWithoutDetaching: [ID!]
+  delete: [ID!]
+  disconnect: [ID!]
+}

@@ -11,7 +11,7 @@
     "homepage": "https://github.com/dpwilhelmsen/lighthouse-model-migrator",
     "keywords": ["Laravel", "Lighthouse Model Migrator"],
     "require": {
-        "illuminate/support": "~5",
+        "illuminate/support": "~6",
         "haydenpierce/class-finder": "~0.4.0",
         "nikic/php-parser": "^4.2"
     },
